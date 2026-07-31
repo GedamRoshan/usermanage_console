@@ -42,15 +42,41 @@ exports.getProfileById = (req, res) => {
 
 exports.searchProfiles = (req, res) => {
   try {
+    const userId = req.user.id;
+    // Get current user's profile to determine gender and location
+    const myProfile = ProfileModel.getByUserId(userId);
+    
     const filters = {
-      gender: req.query.gender,
       religion: req.query.religion,
       caste: req.query.caste,
       marital_status: req.query.marital_status,
-      country: req.query.country,
-      city: req.query.city,
-      exclude_user_id: req.user.id
+      exclude_user_id: userId
     };
+
+    if (myProfile) {
+      // 1. Auto-assign opposite gender
+      const myGender = myProfile.gender ? myProfile.gender.toLowerCase() : null;
+      if (myGender === 'male') {
+        filters.gender = 'Female';
+      } else if (myGender === 'female') {
+        filters.gender = 'Male';
+      } else {
+        filters.gender = req.query.gender; // fallback
+      }
+
+      // 2. Handle 'nearby' logic
+      if (req.query.nearby === 'true' && myProfile.city) {
+        filters.city = myProfile.city;
+      } else {
+        filters.country = req.query.country;
+        filters.city = req.query.city;
+      }
+    } else {
+      filters.gender = req.query.gender;
+      filters.country = req.query.country;
+      filters.city = req.query.city;
+    }
+
     const profiles = ProfileModel.searchProfiles(filters);
     res.json({ count: profiles.length, profiles });
   } catch (err) {
