@@ -1,68 +1,41 @@
 const twilio = require('twilio');
 
-async function sendWhatsAppOTP(phone) {
+async function sendSMSOTP(phone) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const verifySid = process.env.TWILIO_VERIFY_SID;
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER; // e.g. +17372508034
 
-  console.log('[Twilio] ACCOUNT_SID present:', !!accountSid);
-  console.log('[Twilio] AUTH_TOKEN present:', !!authToken);
-  console.log('[Twilio] VERIFY_SID present:', !!verifySid);
+  console.log('[Twilio SMS] ACCOUNT_SID present:', !!accountSid);
+  console.log('[Twilio SMS] AUTH_TOKEN present:', !!authToken);
+  console.log('[Twilio SMS] FROM_NUMBER present:', !!fromNumber);
 
-  if (accountSid && authToken && verifySid) {
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  if (accountSid && authToken && fromNumber) {
     try {
       const client = twilio(accountSid, authToken);
-      const verification = await client.verify.v2
-        .services(verifySid)
-        .verifications.create({
-          to: `whatsapp:${phone}`,
-          channel: 'whatsapp'
-        });
+      const message = await client.messages.create({
+        from: fromNumber,
+        to: phone,
+        body: `Your LifePartner Matrimony OTP is: ${otpCode}. Valid for 5 minutes. Do not share this code.`
+      });
 
-      console.log('[Twilio Verify] Status:', verification.status);
-      return { success: true, mode: 'TWILIO_LIVE', status: verification.status };
+      console.log('[Twilio SMS] Message SID:', message.sid);
+      return { success: true, mode: 'TWILIO_LIVE', sid: message.sid, otp: otpCode };
     } catch (error) {
-      console.error('[Twilio Verify Error]:', error.message);
-      throw new Error(`Failed to send WhatsApp OTP via Twilio Verify: ${error.message}`);
+      console.error('[Twilio SMS Error]:', error.message);
+      throw new Error(`Failed to send SMS OTP: ${error.message}`);
     }
   } else {
     // Dev Mode Fallback
-    const devOtp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log(`\n==================================================`);
-    console.log(`[DEV MODE WHATSAPP OTP] Phone: ${phone} | Code: ${devOtp}`);
+    console.log(`[DEV MODE SMS OTP] Phone: ${phone} | Code: ${otpCode}`);
     console.log(`==================================================\n`);
-    return { success: true, mode: 'DEV_MODE', otp: devOtp };
+    return { success: true, mode: 'DEV_MODE', otp: otpCode };
   }
 }
 
-async function verifyWhatsAppOTP(phone, code) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const verifySid = process.env.TWILIO_VERIFY_SID;
+// Keep WhatsApp function name for backward compatibility with controller
+const sendWhatsAppOTP = sendSMSOTP;
 
-  if (accountSid && authToken && verifySid) {
-    try {
-      const client = twilio(accountSid, authToken);
-      const verificationCheck = await client.verify.v2
-        .services(verifySid)
-        .verificationChecks.create({
-          to: `whatsapp:${phone}`,
-          code: code
-        });
-
-      console.log('[Twilio Verify Check] Status:', verificationCheck.status);
-      return {
-        success: verificationCheck.status === 'approved',
-        status: verificationCheck.status
-      };
-    } catch (error) {
-      console.error('[Twilio Verify Check Error]:', error.message);
-      throw new Error(`Failed to verify OTP: ${error.message}`);
-    }
-  } else {
-    // Dev Mode - always approve
-    return { success: true, status: 'approved', mode: 'DEV_MODE' };
-  }
-}
-
-module.exports = { sendWhatsAppOTP, verifyWhatsAppOTP };
+module.exports = { sendWhatsAppOTP, sendSMSOTP };
