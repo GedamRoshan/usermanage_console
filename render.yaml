@@ -3,8 +3,10 @@ services:
     name: lifepartner-matrimony-api
     env: node
     plan: free
-    buildCommand: npm install
+    region: singapore
+    buildCommand: npm install --build-from-source
     startCommand: node index.js
+
     envVars:
       - key: NODE_ENV
         value: production
