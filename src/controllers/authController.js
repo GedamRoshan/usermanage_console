@@ -35,7 +35,7 @@ exports.sendWhatsAppOTP = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully to your WhatsApp number',
+      message: 'OTP sent successfully to your phone via SMS',
       mode: dispatchResult.mode,
       dev_otp: dispatchResult.mode === 'DEV_MODE' ? dispatchResult.otp : undefined
     });
