@@ -23,6 +23,19 @@ app.get("/", (req, res) => {
   res.json({ message: "Matrimony Application API Service is Online", version: "1.0.0" });
 });
 
+// Temporary debug route - remove after fixing
+app.get("/debug/env", (req, res) => {
+  res.json({
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID ? `SET (${process.env.TWILIO_ACCOUNT_SID.substring(0, 8)}...)` : 'NOT SET',
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'NOT SET',
+    TWILIO_WHATSAPP_NUMBER: process.env.TWILIO_WHATSAPP_NUMBER || 'NOT SET',
+    JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET',
+    NODE_ENV: process.env.NODE_ENV || 'NOT SET',
+    PORT: process.env.PORT || 'NOT SET'
+  });
+});
+
+
 app.listen(port, () => {
   console.log(`Matrimony Server is running at http://localhost:${port}`);
 });
