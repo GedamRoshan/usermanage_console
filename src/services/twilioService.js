@@ -3,11 +3,14 @@ const twilio = require('twilio');
 async function sendSMSOTP(phone) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER; // e.g. +17372508034
+  let rawFromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_WHATSAPP_NUMBER;
+  
+  // CRITICAL FIX: Ensure 'whatsapp:' prefix is removed so Twilio sends an SMS, not WhatsApp
+  const fromNumber = rawFromNumber ? rawFromNumber.replace('whatsapp:', '') : null;
 
   console.log('[Twilio SMS] ACCOUNT_SID present:', !!accountSid);
   console.log('[Twilio SMS] AUTH_TOKEN present:', !!authToken);
-  console.log('[Twilio SMS] FROM_NUMBER present:', !!fromNumber);
+  console.log('[Twilio SMS] FROM_NUMBER:', fromNumber);
 
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
