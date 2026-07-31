@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment Variables - NEVER commit this!
+.env
+.env.local
+.env.production
+
+# Database file
+data/
+*.sqlite
+
+# System Files
+.DS_Store
