@@ -7,6 +7,7 @@ router.use(authenticate);
 
 // Profile CRUD & Search
 router.post('/', profileController.upsertProfile);
+router.put('/', profileController.upsertProfile);
 router.get('/me', profileController.getMyProfile);
 router.get('/search', profileController.searchProfiles);
 router.get('/:userId', profileController.getProfileById);
