@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 const OTPModel = require('../models/otpModel');
-const { sendWhatsAppOTP } = require('../services/twilioService');
+const { sendWhatsAppOTP, verifyWhatsAppOTP } = require('../services/twilioService');
 const { jwtSecret } = require('../config');
 
 exports.sendWhatsAppOTP = async (req, res) => {
@@ -25,14 +25,13 @@ exports.sendWhatsAppOTP = async (req, res) => {
       return res.status(409).json({ message: 'Phone number is already registered' });
     }
 
-    // Generate random 6-digit numeric OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Send via Twilio Verify (handles OTP internally) / Dev Fallback
+    const dispatchResult = await sendWhatsAppOTP(cleanPhone);
 
-    // Save to Database
-    OTPModel.createOTP(cleanPhone, otpCode, 5);
-
-    // Send via Twilio / Dev Fallback
-    const dispatchResult = await sendWhatsAppOTP(cleanPhone, otpCode);
+    // In DEV MODE only: save OTP to DB for manual verification
+    if (dispatchResult.mode === 'DEV_MODE') {
+      OTPModel.createOTP(cleanPhone, dispatchResult.otp, 5);
+    }
 
     res.status(200).json({
       success: true,
