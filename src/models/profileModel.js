@@ -4,89 +4,135 @@ class ProfileModel {
   static createOrUpdateProfile(userId, profileData) {
     const existing = db.prepare('SELECT id FROM profiles WHERE user_id = ?').get(userId);
     const {
+      profile_created_for,
       full_name,
       gender,
       dob,
       height_cm,
+      weight,
       marital_status,
       mother_tongue,
       religion,
       caste,
       sub_caste,
       gothram,
+      manglik,
       highest_education,
       occupation,
+      company,
+      designation,
       annual_income,
+      experience,
       country,
       state,
       city,
+      pincode,
+      current_address,
+      live_location_enabled,
+      work_location,
       about_me,
       diet,
       smoking,
       drinking,
+      exercise,
+      photos,
       photo_privacy
     } = profileData;
+
+    // Convert photos array to JSON string for SQLite storage
+    const photosJson = photos ? JSON.stringify(photos) : null;
+    const liveLoc = live_location_enabled ? 1 : 0;
 
     if (existing) {
       const stmt = db.prepare(`
         UPDATE profiles SET
+          profile_created_for = COALESCE(?, profile_created_for),
           full_name = COALESCE(?, full_name),
           gender = COALESCE(?, gender),
           dob = COALESCE(?, dob),
           height_cm = COALESCE(?, height_cm),
+          weight = COALESCE(?, weight),
           marital_status = COALESCE(?, marital_status),
           mother_tongue = COALESCE(?, mother_tongue),
           religion = COALESCE(?, religion),
           caste = COALESCE(?, caste),
           sub_caste = COALESCE(?, sub_caste),
           gothram = COALESCE(?, gothram),
+          manglik = COALESCE(?, manglik),
           highest_education = COALESCE(?, highest_education),
           occupation = COALESCE(?, occupation),
+          company = COALESCE(?, company),
+          designation = COALESCE(?, designation),
           annual_income = COALESCE(?, annual_income),
+          experience = COALESCE(?, experience),
           country = COALESCE(?, country),
           state = COALESCE(?, state),
           city = COALESCE(?, city),
+          pincode = COALESCE(?, pincode),
+          current_address = COALESCE(?, current_address),
+          live_location_enabled = COALESCE(?, live_location_enabled),
+          work_location = COALESCE(?, work_location),
           about_me = COALESCE(?, about_me),
           diet = COALESCE(?, diet),
           smoking = COALESCE(?, smoking),
           drinking = COALESCE(?, drinking),
+          exercise = COALESCE(?, exercise),
+          photos = COALESCE(?, photos),
           photo_privacy = COALESCE(?, photo_privacy),
           updated_at = CURRENT_TIMESTAMP
         WHERE user_id = ?
       `);
       stmt.run(
-        full_name, gender, dob, height_cm, marital_status, mother_tongue,
-        religion, caste, sub_caste, gothram, highest_education, occupation,
-        annual_income, country, state, city, about_me, diet, smoking,
-        drinking, photo_privacy, userId
+        profile_created_for, full_name, gender, dob, height_cm, weight,
+        marital_status, mother_tongue, religion, caste, sub_caste, gothram,
+        manglik, highest_education, occupation, company, designation,
+        annual_income, experience, country, state, city, pincode,
+        current_address, live_location_enabled !== undefined ? liveLoc : null,
+        work_location, about_me, diet, smoking, drinking, exercise,
+        photosJson, photo_privacy, userId
       );
       return this.getByUserId(userId);
     } else {
       const stmt = db.prepare(`
         INSERT INTO profiles (
-          user_id, full_name, gender, dob, height_cm, marital_status,
-          mother_tongue, religion, caste, sub_caste, gothram,
-          highest_education, occupation, annual_income, country, state,
-          city, about_me, diet, smoking, drinking, photo_privacy
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          user_id, profile_created_for, full_name, gender, dob, height_cm, weight,
+          marital_status, mother_tongue, religion, caste, sub_caste, gothram,
+          manglik, highest_education, occupation, company, designation,
+          annual_income, experience, country, state, city, pincode,
+          current_address, live_location_enabled, work_location, about_me,
+          diet, smoking, drinking, exercise, photos, photo_privacy
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
       `);
       stmt.run(
-        userId, full_name, gender, dob, height_cm, marital_status,
-        mother_tongue, religion, caste, sub_caste, gothram,
-        highest_education, occupation, annual_income, country, state,
-        city, about_me, diet, smoking, drinking, photo_privacy || 'PUBLIC'
+        userId, profile_created_for, full_name, gender, dob, height_cm, weight,
+        marital_status, mother_tongue, religion, caste, sub_caste, gothram,
+        manglik, highest_education, occupation, company, designation,
+        annual_income, experience, country, state, city, pincode,
+        current_address, liveLoc, work_location, about_me,
+        diet, smoking, drinking, exercise, photosJson, photo_privacy || 'PUBLIC'
       );
       return this.getByUserId(userId);
     }
   }
 
   static getByUserId(userId) {
-    return db.prepare(`
+    const profile = db.prepare(`
       SELECT p.*, u.email, u.phone, u.status as user_status
       FROM profiles p
       JOIN users u ON p.user_id = u.id
       WHERE p.user_id = ?
     `).get(userId);
+
+    if (profile && profile.photos) {
+      try {
+        profile.photos = JSON.parse(profile.photos);
+      } catch(e) {
+        profile.photos = [];
+      }
+    }
+    return profile;
   }
 
   static searchProfiles(filters = {}) {
@@ -128,7 +174,14 @@ class ProfileModel {
     }
 
     query += ` ORDER BY p.created_at DESC LIMIT 50`;
-    return db.prepare(query).all(...params);
+    const profiles = db.prepare(query).all(...params);
+
+    return profiles.map(p => {
+      if (p.photos) {
+        try { p.photos = JSON.parse(p.photos); } catch(e) { p.photos = []; }
+      }
+      return p;
+    });
   }
 
   static setPreferences(userId, prefData) {
